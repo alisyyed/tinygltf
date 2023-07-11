@@ -149,7 +149,6 @@ jobs:
 
             git clone https://github.com/Tencent/rapidjson
             aarch64-linux-gnu-g++ -DTINYGLTF_USE_RAPIDJSON -I./rapidjson/include/rapidjson -std=c++11 -g -O0 -o loader_example loader_example.cc
-
   # macOS clang
   build-macos:
 
