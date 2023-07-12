@@ -3,10 +3,8 @@ name: C/C++ CI
 on:
   push:
     branches:
-      - release
-  pull_request:
-    branches:
-      - release
+      - main
+      - release/*
 
 jobs:
   build:
@@ -15,59 +13,52 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            compiler: gcc
+          - os: ubuntu-latest
+            compiler: clang
+          - os: windows-latest
+            compiler: vs2019
+          - os: macos-latest
+            compiler: clang
 
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v2
-
-      - name: Set up Cache
-        uses: actions/cache@v2
         with:
-          path: |
-            ~/.cache
-          key: ${{ runner.os }}-build-${{ hashFiles('**/CMakeLists.txt') }}
+          repository: alisyyed/tinygltf
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ssh-strict: true
+          persist-credentials: true
+          clean: true
+          fetch-depth: 1
+          lfs: false
+          submodules: false
+          set-safe-directory: true
 
-      - name: Build
+      - name: Configure Git
+        run: git config --global --add safe.directory ${{ github.workspace }}/tinygltf
+
+      - name: Install build essentials
         run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential
+          if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+            sudo apt-get update
+            sudo apt-get install -y build-essential
+          elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            choco install visualstudio2019buildtools --package-parameters "--includeRecommended --includeOptional"
+          fi
 
-          # Perform your build steps here
-          # Example build steps for each platform:
-
-          # Build on Ubuntu
-          - name: Build on Ubuntu
-            if: matrix.os == 'ubuntu-latest'
-            run: |
-              g++ -std=c++11 -o loader_example loader_example.cc
-              ./loader_example models/Cube/Cube.gltf
-
-          # Build on Windows
-          - name: Build on Windows
-            if: matrix.os == 'windows-latest'
-            run: |
-              mkdir build
-              cd build
-              cmake -G "Visual Studio 17 2022" -A x64 -DTINYGLTF_BUILD_LOADER_EXAMPLE=On -DTINYGLTF_BUILD_GL_EXAMPLES=Off -DTINYGLTF_BUILD_VALIDATOR_EXAMPLE=On ..
-              cmake --build . --config Release
-              cd ..
-
-          # Build on macOS
-          - name: Build on macOS
-            if: matrix.os == 'macos-latest'
-            run: |
-              clang++ -std=c++11 -g -O0 -o loader_example loader_example.cc
-              ./loader_example models/Cube/Cube.gltf
-
-      - name: Package Artifacts
-        run: |
-          # Perform packaging steps here
-          # For example, create a ZIP file with the build artifacts
-          zip -r artifacts.zip loader_example models/
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v3.1.2
+      - name: Set up CMake ${{ matrix.compiler }}
+        uses: dawidd6/action-cmake@v1
         with:
-          name: build-artifact
-          path: |
-            artifacts.zip
+          cmake-version: 3.21
+
+      - name: Build and Test
+        run: |
+          cd ${{ github.workspace }}/tinygltf
+          mkdir build
+          cd build
+          cmake ..
+          cmake --build .
+          ctest
