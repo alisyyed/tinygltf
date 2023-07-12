@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - release/*
+      - 'release/*'
 
 jobs:
   build:
@@ -26,19 +26,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-        with:
-          repository: alisyyed/tinygltf
-          token: ${{ secrets.GITHUB_TOKEN }}
-          ssh-strict: true
-          persist-credentials: true
-          clean: true
-          fetch-depth: 1
-          lfs: false
-          submodules: false
-          set-safe-directory: true
 
-      - name: Configure Git
-        run: git config --global --add safe.directory ${{ github.workspace }}/tinygltf
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.x
 
       - name: Install build essentials
         run: |
@@ -47,6 +39,8 @@ jobs:
             sudo apt-get install -y build-essential
           elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
             choco install visualstudio2019buildtools --package-parameters "--includeRecommended --includeOptional"
+          elif [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+            xcode-select --install
           fi
 
       - name: Set up CMake ${{ matrix.compiler }}
@@ -61,4 +55,4 @@ jobs:
           cd build
           cmake ..
           cmake --build .
-          ctest 
+          ctest
