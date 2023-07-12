@@ -33,14 +33,17 @@ jobs:
           sudo apt-get install -y build-essential
 
           # Perform your build steps here
-          # For example:
-          - name: Build with MinGW gcc cross
+          # Example build steps for each platform:
+
+          # Build on Ubuntu
+          - name: Build on Ubuntu
             if: matrix.os == 'ubuntu-latest'
             run: |
-              sudo apt-get install -y mingw-w64
-              x86_64-w64-mingw32-g++ -std=c++11 -o loader_example loader_example.cc
+              g++ -std=c++11 -o loader_example loader_example.cc
+              ./loader_example models/Cube/Cube.gltf
 
-          - name: Build for Windows(x64, MSVC)
+          # Build on Windows
+          - name: Build on Windows
             if: matrix.os == 'windows-latest'
             run: |
               mkdir build
@@ -49,35 +52,22 @@ jobs:
               cmake --build . --config Release
               cd ..
 
-          - name: Buld with gcc
-            if: matrix.os == 'ubuntu-latest'
-            run: |
-              g++ -std=c++11 -o loader_example loader_example.cc
-
-          - name: Buld with gcc + rapidjson
-            if: matrix.os == 'ubuntu-latest'
-            run: |
-              git clone https://github.com/Tencent/rapidjson
-              g++ -DTINYGLTF_USE_RAPIDJSON -I./rapidjson/include/rapidjson -std=c++11 -o loader_example loader_example.cc
-
-          - name: Build on cross aarch64
-            if: matrix.os == 'ubuntu-latest'
-            run: |
-              sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
-              git clone https://github.com/Tencent/rapidjson
-              aarch64-linux-gnu-g++ -DTINYGLTF_USE_RAPIDJSON -I./rapidjson/include/rapidjson -std=c++11 -g -O0 -o loader_example loader_example.cc
-
+          # Build on macOS
           - name: Build on macOS
             if: matrix.os == 'macos-latest'
             run: |
               clang++ -std=c++11 -g -O0 -o loader_example loader_example.cc
               ./loader_example models/Cube/Cube.gltf
-              git clone https://github.com/Tencent/rapidjson
-              clang++ -DTINYGLTF_USE_RAPIDJSON -I./rapidjson/include/rapidjson -std=c++11 -g -O0 -o loader_example loader_example.cc
+
+      - name: Package Artifacts
+        run: |
+          # Perform packaging steps here
+          # For example, create a ZIP file with the build artifacts
+          zip -r artifacts.zip loader_example models/
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v3.1.2
         with:
           name: build-artifact
           path: |
-            loader_example
+            artifacts.zip
